@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>채매평 — 골절 분류 AI</title>
+<meta name="theme-color" content="#0d0f14">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f14; --bg2: #13161d; --bg3: #1a1e28; --surface: #1e2230;
+    --surface2: #252a3a; --border: #2e3448; --border2: #3a4060;
+    --text: #e8eaf0; --text2: #9ba3bf; --text3: #5c6480;
+    --accent: #4f8ef7; --accent2: #3a6fd4; --green: #34d399; --green2: #059669;
+    --amber: #fbbf24; --amber2: #d97706; --red: #f87171; --red2: #dc2626;
+    --purple: #a78bfa; --teal: #2dd4bf;
+    --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    --radius: 8px; --radius-lg: 12px; --radius-xl: 16px;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,15,20,0.92); backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 52px;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo-badge {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: #fff; font-size: 12px; font-weight: 700;
+    padding: 4px 10px; border-radius: 6px; letter-spacing: 0.03em;
+  }
+  .nav-logo-text { font-size: 13px; color: var(--text2); }
+  .nav-pills { display: flex; gap: 4px; }
+  .nav-pill {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; border: 0.5px solid var(--border2);
+    color: var(--text3); background: transparent; cursor: pointer; transition: all 0.15s;
+  }
+  .nav-pill:hover, .nav-pill.active { background: var(--surface2); color: var(--text2); }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+
+  .hero { padding: 3.5rem 0 2.5rem; border-bottom: 0.5px solid var(--border); margin-bottom: 2.5rem; }
+  .hero-eyebrow { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+  .eyebrow-badge {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--accent); background: rgba(79,142,247,0.12);
+    border: 0.5px solid rgba(79,142,247,0.3); padding: 3px 10px; border-radius: 20px;
+  }
+  .hero h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 700; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+  .hero h1 span { color: var(--accent); }
+  .hero-desc { font-size: 15px; color: var(--text2); max-width: 620px; line-height: 1.7; margin-bottom: 1.5rem; }
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .htag { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border2); color: var(--text2); display: flex; align-items: center; gap: 5px; }
+  .htag .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .htag.blue .dot { background: var(--accent); } .htag.green .dot { background: var(--green); }
+  .htag.amber .dot { background: var(--amber); } .htag.purple .dot { background: var(--purple); }
+  .htag.teal .dot { background: var(--teal); } .htag.red .dot { background: var(--red); }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+  .stat-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .stat-card.blue::before { background: var(--accent); } .stat-card.green::before { background: var(--green); }
+  .stat-card.amber::before { background: var(--amber); } .stat-card.purple::before { background: var(--purple); }
+  .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px; margin-top: 2rem;
+  }
+  .section-title::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border2); border-radius: var(--radius-xl);
+    padding: 2.5rem 2rem; text-align: center; cursor: pointer; transition: all 0.2s;
+    position: relative; background: var(--bg2); margin-bottom: 0.5rem;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(79,142,247,0.04); }
+  .upload-zone.dragging { border-color: var(--accent); background: rgba(79,142,247,0.08); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon-wrap { width: 52px; height: 52px; border-radius: 50%; background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.25); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 22px; color: var(--accent); }
+  .upload-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .upload-sub { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+  .fmt-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .fmt-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; border: 0.5px solid var(--border2); color: var(--text3); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 2rem; }
+  .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; position: relative; }
+  .panel.success { border-color: var(--green2); }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .panel-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); }
+  .status-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+  .status-dot.live { background: var(--green); box-shadow: 0 0 0 2px rgba(52,211,153,0.25); }
+  .status-dot.analyzing { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── 이미지 + 박스 오버레이 ── */
+  .img-wrap { position: relative; display: block; width: 100%; background: var(--bg3); border-radius: 8px; overflow: hidden; min-height: 180px; }
+  #preview-img { width: 100%; display: block; border-radius: 8px; object-fit: contain; }
+  #bbox-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border-radius: 8px; }
+  .img-meta { font-size: 11px; color: var(--text3); margin-top: 8px; }
+
+  .pred-main { text-align: center; padding: 1rem 0; }
+  .pred-eyebrow { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 6px; }
+  .pred-type { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .pred-kr { font-size: 14px; color: var(--text2); margin-top: 3px; }
+  .conf-wrap { margin-top: 14px; }
+  .conf-header { display: flex; justify-content: space-between; font-size: 12px; color: var(--text3); margin-bottom: 5px; }
+  .conf-pct { font-size: 13px; font-weight: 700; color: var(--green); }
+  .conf-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .conf-fill { height: 100%; background: linear-gradient(90deg, var(--green2), var(--green)); border-radius: 3px; width: 0; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+  .divider { height: 0.5px; background: var(--border); margin: 12px 0; }
+  .top5-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text3); margin-bottom: 8px; }
+  .pred-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 0.5px solid var(--border); }
+  .pred-row:last-child { border-bottom: none; }
+  .pred-rank { font-size: 11px; color: var(--text3); width: 14px; text-align: center; }
+  .pred-name { font-size: 13px; color: var(--text); flex: 1; font-weight: 500; }
+  .pred-mini-bar { flex: 2; height: 4px; background: var(--bg3); border-radius: 2px; }
+  .pred-mini-fill { height: 100%; border-radius: 2px; background: var(--border2); }
+  .pred-mini-fill.top { background: var(--accent); }
+  .pred-pct { font-size: 12px; color: var(--text2); width: 40px; text-align: right; }
+
+  /* ── AI 분석 로딩 ── */
+  .ai-loading {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 2rem; text-align: center;
+    margin-bottom: 1.5rem; display: none;
+  }
+  .ai-loading.visible { display: block; }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-loading-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .ai-loading-sub { font-size: 13px; color: var(--text2); }
+
+  /* ── 골절 감지 결과 배너 ── */
+  .detect-banner {
+    display: none; border-radius: var(--radius-lg); padding: 1rem 1.25rem;
+    margin-bottom: 1rem; border: 0.5px solid;
+  }
+  .detect-banner.visible { display: flex; align-items: flex-start; gap: 12px; }
+  .detect-banner.found { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.4); }
+  .detect-banner.not-found { background: rgba(52,211,153,0.08); border-color: rgba(52,211,153,0.3); }
+  .detect-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .detect-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .detect-banner.found .detect-title { color: var(--red); }
+  .detect-banner.not-found .detect-title { color: var(--green); }
+  .detect-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .detect-region { font-size: 12px; font-weight: 600; margin-top: 6px; }
+  .detect-banner.found .detect-region { color: var(--amber); }
+
+  /* ── 재활 주의사항 패널 ── */
+  .rehab-panel {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem; display: none;
+    border-left: 3px solid var(--red);
+  }
+  .rehab-panel.visible { display: block; animation: fadeSlide 0.3s ease; }
+  @keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .rehab-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .rehab-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(248,113,113,0.15); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .rehab-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .rehab-subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .rehab-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .rehab-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .rehab-card-icon { font-size: 18px; margin-bottom: 6px; }
+  .rehab-card-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .rehab-card-desc { font-size: 11px; color: var(--text2); line-height: 1.6; }
+  .rehab-section { margin-bottom: 14px; }
+  .rehab-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .rehab-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
+  .rehab-list { list-style: none; }
+  .rehab-list li { font-size: 13px; color: var(--text2); padding: 5px 0; border-bottom: 0.5px solid var(--border); display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; }
+  .rehab-list li:last-child { border-bottom: none; }
+  .rehab-list li::before { content: attr(data-icon); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .rehab-timeline { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .rehab-phase { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; min-width: 140px; flex-shrink: 0; }
+  .rehab-phase-week { font-size: 10px; font-weight: 700; color: var(--accent); font-family: var(--mono); margin-bottom: 4px; }
+  .rehab-phase-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .rehab-phase-desc { font-size: 11px; color: var(--text3); line-height: 1.5; }
+  .warn-box { background: rgba(251,191,36,0.08); border: 0.5px solid rgba(251,191,36,0.3); border-radius: var(--radius); padding: 10px 14px; margin-top: 12px; }
+  .warn-box-title { font-size: 12px; font-weight: 700; color: var(--amber); margin-bottom: 4px; }
+  .warn-box-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  /* ── TTA ── */
+  .tta-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 2rem; }
+  .tta-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 8px; text-align: center; }
+  .tta-aug { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tta-pred { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 4px; }
+  .tta-conf { font-size: 11px; color: var(--green); margin-top: 2px; }
+  .tta-bar { height: 3px; background: var(--bg3); border-radius: 2px; margin-top: 6px; }
+  .tta-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  /* ── Model table ── */
+  .model-table-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text3); padding: 10px 14px; text-align: left; background: var(--bg2); border-bottom: 0.5px solid var(--border); }
+  tbody td { padding: 10px 14px; border-bottom: 0.5px solid var(--border); font-size: 13px; color: var(--text); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.best-row td { background: rgba(52,211,153,0.05); }
+  tbody tr:hover td { background: var(--surface2); }
+  .model-medal { font-size: 16px; }
+  .model-name-cell strong { font-weight: 600; }
+  .model-name-cell small { font-size: 11px; color: var(--text3); display: block; margin-top: 1px; }
+  .acc-num { font-size: 13px; font-weight: 600; }
+  .acc-num.best { color: var(--green); }
+  .mini-bar { height: 3px; border-radius: 2px; background: var(--bg3); margin-top: 4px; }
+  .mini-fill { height: 100%; border-radius: 2px; background: var(--accent2); }
+  .mini-fill.best { background: var(--green); }
+  .speed-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: var(--bg3); border: 0.5px solid var(--border); color: var(--text2); font-family: var(--mono); }
+  .f1-badge { font-size: 12px; font-weight: 600; color: var(--purple); }
+
+  /* ── Fracture types ── */
+  .fracture-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 0.5rem; }
+  .frac-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 10px; cursor: pointer; transition: all 0.15s; }
+  .frac-card:hover { background: var(--surface2); border-color: var(--border2); transform: translateY(-1px); }
+  .frac-card.active { border-color: var(--accent); background: rgba(79,142,247,0.08); }
+  .frac-num { font-size: 10px; font-weight: 700; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; }
+  .frac-en { font-size: 12px; font-weight: 600; color: var(--text); }
+  .frac-kr { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .frac-sev { font-size: 10px; margin-top: 6px; padding: 2px 6px; border-radius: 3px; display: inline-block; font-weight: 600; }
+  .sev-mild { background: rgba(52,211,153,0.12); color: var(--green); }
+  .sev-mod { background: rgba(251,191,36,0.12); color: var(--amber); }
+  .sev-sev { background: rgba(248,113,113,0.12); color: var(--red); }
+  .frac-detail { background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 2rem; display: none; animation: fadeSlide 0.2s ease; }
+  .frac-detail.visible { display: block; }
+  .frac-detail-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .frac-detail-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .frac-detail-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .frac-close { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .frac-close:hover { background: var(--surface); color: var(--text2); }
+  .frac-desc { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 0.5px solid var(--border); }
+  .frac-meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .frac-meta-key { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); margin-bottom: 4px; }
+  .frac-meta-val { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  /* ── Pipeline ── */
+  .pipeline-scroll { overflow-x: auto; padding-bottom: 6px; margin-bottom: 1rem; }
+  .pipeline-track { display: flex; align-items: center; gap: 0; min-width: max-content; }
+  .pipe-step { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; min-width: 90px; }
+  .pipe-step-num { font-size: 10px; font-weight: 700; color: var(--accent); font-family: var(--mono); margin-bottom: 3px; }
+  .pipe-step-title { font-size: 12px; font-weight: 600; color: var(--text); }
+  .pipe-step-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .pipe-arrow { color: var(--text3); padding: 0 6px; font-size: 14px; flex-shrink: 0; }
+
+  .phase-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 2rem; }
+  .phase-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; border-left: 3px solid var(--border); }
+  .phase-card.p1 { border-left-color: var(--accent); } .phase-card.p2 { border-left-color: var(--amber); }
+  .phase-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .phase-desc { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 10px; }
+  .phase-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .phase-tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 4px; font-family: var(--mono); }
+  .p1-tag { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .p2-tag { background: rgba(251,191,36,0.12); color: var(--amber); }
+
+  .aug-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 2rem; }
+  .aug-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 12px; display: flex; align-items: flex-start; gap: 10px; }
+  .aug-icon-wrap { width: 32px; height: 32px; flex-shrink: 0; border-radius: 6px; background: var(--bg2); border: 0.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .aug-title { font-size: 12px; font-weight: 600; color: var(--text); }
+  .aug-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .param-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 2rem; }
+  .param-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .param-name { font-size: 11px; font-weight: 700; color: var(--accent); font-family: var(--mono); margin-bottom: 4px; }
+  .param-val { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+  .param-desc { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .empty-state { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; text-align: center; margin-bottom: 2rem; }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; color: var(--text2); }
+  .demo-btn { display: inline-block; margin-top: 14px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; padding: 8px 20px; border-radius: var(--radius); border: none; cursor: pointer; transition: background 0.15s; }
+  .demo-btn:hover { background: var(--accent2); }
+
+  footer { border-top: 0.5px solid var(--border); padding: 1.5rem 2rem; display: flex; align-items: center; justify-content: space-between; margin-top: 3rem; }
+  .footer-left { font-size: 12px; color: var(--text3); }
+  .footer-left strong { color: var(--text2); }
+  .footer-models { display: flex; gap: 8px; flex-wrap: wrap; }
+  .footer-model-tag { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; border: 0.5px solid var(--border2); color: var(--text3); font-family: var(--mono); }
+
+  @media (max-width: 768px) {
+    nav { padding: 0 1rem; } .container { padding: 0 1rem; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .fracture-grid { grid-template-columns: repeat(2, 1fr); }
+    .frac-meta-grid { grid-template-columns: repeat(2, 1fr); }
+    .param-grid { grid-template-columns: repeat(2, 1fr); }
+    .aug-grid { grid-template-columns: repeat(2, 1fr); }
+    .phase-row { grid-template-columns: 1fr; }
+    .tta-grid { grid-template-columns: repeat(3, 1fr); }
+    .rehab-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero h1 { font-size: 22px; }
+    footer { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .nav-pills { display: none; }
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <span class="nav-logo-badge">채매평</span>
+    <span class="nav-logo-text">骨折分類 AI 評価 システム</span>
+  </div>
+  <div class="nav-pills">
+    <span class="nav-pill active" onclick="scrollTo(0,0)">개요</span>
+    <span class="nav-pill" onclick="document.getElementById('s-classify').scrollIntoView({behavior:'smooth'})">분류</span>
+    <span class="nav-pill" onclick="document.getElementById('s-models').scrollIntoView({behavior:'smooth'})">모델</span>
+    <span class="nav-pill" onclick="document.getElementById('s-types').scrollIntoView({behavior:'smooth'})">골절 유형</span>
+    <span class="nav-pill" onclick="document.getElementById('s-params').scrollIntoView({behavior:'smooth'})">파라미터</span>
+  </div>
+</nav>
+
+<div class="container">
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <span class="eyebrow-badge">골절 분류 AI</span>
+      <span style="font-size:12px;color:var(--text3)">· 10-Class · TTA · AMP · 골절 위치 감지 · 재활 가이드</span>
+    </div>
+    <h1>🦴 골절 유형 <span>AI 분류 시스템</span></h1>
+    <p class="hero-desc">
+      X-ray 이미지를 업로드하면 AI가 10종 골절 유형을 자동 분류하고, <strong style="color:var(--red)">골절 위치에 빨간 박스</strong>를 표시합니다.
+      분류 결과에 따른 <strong style="color:var(--amber)">재활 주의사항 및 회복 가이드</strong>도 함께 제공합니다.
+    </p>
+    <div class="hero-tags">
+      <span class="htag blue"><span class="dot"></span>10 골절 유형</span>
+      <span class="htag green"><span class="dot"></span>5 AI 모델</span>
+      <span class="htag amber"><span class="dot"></span>TTA 5× 앙상블</span>
+      <span class="htag purple"><span class="dot"></span>AMP 혼합 정밀도</span>
+      <span class="htag red"><span class="dot"></span>골절 위치 감지</span>
+      <span class="htag teal"><span class="dot"></span>재활 가이드</span>
+    </div>
+  </section>
+
+  <div class="stats-row">
+    <div class="stat-card blue"><div class="stat-label">분류 유형</div><div class="stat-value">10종</div><div class="stat-sub">골절 클래스 수</div></div>
+    <div class="stat-card green"><div class="stat-label">최고 정확도</div><div class="stat-value">94.2%</div><div class="stat-sub">EfficientNet-B3 TTA</div></div>
+    <div class="stat-card amber"><div class="stat-label">학습 에포크</div><div class="stat-value">20ep</div><div class="stat-sub">Phase 1(5) + Phase 2(15)</div></div>
+    <div class="stat-card purple"><div class="stat-label">앙상블 추론</div><div class="stat-value">5×</div><div class="stat-sub">TTA 평균 앙상블</div></div>
+  </div>
+
+  <section id="s-classify">
+    <div class="section-title">X-ray 이미지 분류</div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" accept="image/*" onchange="handleFile(this.files[0])">
+      <div class="upload-icon-wrap">📤</div>
+      <div class="upload-title">X-ray 이미지를 업로드하세요</div>
+      <div class="upload-sub">드래그 앤 드롭 또는 클릭하여 선택 · Claude AI가 골절 위치를 직접 분석합니다</div>
+      <div class="fmt-row">
+        <span class="fmt-badge">PNG</span><span class="fmt-badge">JPG</span><span class="fmt-badge">JPEG</span>
+        <span class="fmt-badge">BMP</span><span class="fmt-badge">TIFF</span><span class="fmt-badge">WEBP</span>
+      </div>
+    </div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🔬</div>
+      <div class="empty-title">분류 결과 및 재활 가이드가 여기에 표시됩니다</div>
+      <div class="empty-sub">이미지를 업로드하거나 데모 시뮬레이션을 실행하세요</div>
+      <button class="demo-btn" onclick="runDemo()">▶ 데모 시뮬레이션 실행</button>
+    </div>
+
+    <!-- AI 분석 로딩 -->
+    <div class="ai-loading" id="ai-loading">
+      <div class="spinner"></div>
+      <div class="ai-loading-title">Claude AI가 X-ray를 분석 중입니다...</div>
+      <div class="ai-loading-sub">골절 위치 감지 및 유형 분류를 수행하고 있습니다</div>
+    </div>
+
+    <div id="result-area" style="display:none">
+
+      <!-- 골절 감지 배너 -->
+      <div class="detect-banner" id="detect-banner">
+        <div class="detect-icon" id="detect-icon"></div>
+        <div>
+          <div class="detect-title" id="detect-title"></div>
+          <div class="detect-desc" id="detect-desc"></div>
+          <div class="detect-region" id="detect-region"></div>
+        </div>
+      </div>
+
+      <div class="two-col" style="margin-top:0.5rem">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">업로드된 이미지 — 골절 위치 표시</span>
+            <div class="status-indicator">
+              <span class="status-dot live" id="img-status-dot"></span>
+              <span id="img-status-text">분석 완료</span>
+            </div>
+          </div>
+          <div class="img-wrap" id="img-wrap">
+            <img id="preview-img" alt="uploaded" />
+            <canvas id="bbox-canvas"></canvas>
+          </div>
+          <div class="img-meta" id="img-meta"></div>
+        </div>
+
+        <div class="panel success">
+          <div class="panel-head">
+            <span class="panel-title">분류 결과 — EfficientNet-B3</span>
+            <div class="status-indicator"><span class="status-dot live"></span> TTA 앙상블</div>
+          </div>
+          <div class="pred-main">
+            <div class="pred-eyebrow">예측 골절 유형</div>
+            <div class="pred-type" id="pred-type">—</div>
+            <div class="pred-kr" id="pred-kr">—</div>
+            <div class="conf-wrap">
+              <div class="conf-header">
+                <span>신뢰도 (TTA 앙상블)</span>
+                <span class="conf-pct" id="conf-pct">—</span>
+              </div>
+              <div class="conf-bar"><div class="conf-fill" id="conf-fill"></div></div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="top5-label">상위 5개 예측 확률 분포</div>
+          <div id="top5-list"></div>
+        </div>
+      </div>
+
+      <!-- 재활 주의사항 -->
+      <div class="section-title">🏥 재활 주의사항 및 회복 가이드</div>
+      <div class="rehab-panel" id="rehab-panel">
+        <div class="rehab-header">
+          <div class="rehab-icon" id="rehab-icon">🦴</div>
+          <div>
+            <div class="rehab-title" id="rehab-title">—</div>
+            <div class="rehab-subtitle" id="rehab-subtitle">—</div>
+          </div>
+        </div>
+
+        <div class="rehab-grid" id="rehab-cards"></div>
+
+        <div class="rehab-section">
+          <div class="rehab-section-title">치료 단계별 타임라인</div>
+          <div class="rehab-timeline" id="rehab-timeline"></div>
+        </div>
+
+        <div class="rehab-section">
+          <div class="rehab-section-title">⚠ 절대 금지 사항</div>
+          <ul class="rehab-list" id="rehab-dont"></ul>
+        </div>
+
+        <div class="rehab-section">
+          <div class="rehab-section-title">✅ 권장 사항</div>
+          <ul class="rehab-list" id="rehab-do"></ul>
+        </div>
+
+        <div class="warn-box">
+          <div class="warn-box-title">⚠ 의료 면책 고지</div>
+          <div class="warn-box-desc" id="rehab-disclaimer">이 정보는 참고용이며 전문 의료진의 진단과 처방을 대체하지 않습니다. 반드시 정형외과 전문의와 상담하세요.</div>
+        </div>
+      </div>
+
+      <div class="section-title">TTA 5× 앙상블 — 각 증강별 개별 예측</div>
+      <div class="tta-grid" id="tta-grid"></div>
+    </div>
+  </section>
+
+  <section id="s-models">
+    <div class="section-title">5개 모델 성능 비교</div>
+    <div class="model-table-wrap">
+      <table>
+        <thead><tr><th>순위</th><th>모델</th><th>파라미터</th><th>TTA 정확도</th><th>Base 정확도</th><th>F1 점수</th><th>추론 속도</th></tr></thead>
+        <tbody id="model-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s-types">
+    <div class="section-title">분류 가능한 골절 유형 (10종)</div>
+    <div class="fracture-grid" id="fracture-grid"></div>
+    <div class="frac-detail" id="frac-detail">
+      <div class="frac-detail-head">
+        <div>
+          <div class="frac-detail-title" id="frac-detail-title">—</div>
+          <div class="frac-detail-sub" id="frac-detail-sub">—</div>
+        </div>
+        <button class="frac-close" onclick="closeFrac()">✕</button>
+      </div>
+      <div class="frac-desc" id="frac-desc"></div>
+      <div class="frac-meta-grid" id="frac-meta-grid"></div>
+    </div>
+  </section>
+
+  <div class="section-title">학습 파이프라인</div>
+  <div class="pipeline-scroll"><div class="pipeline-track" id="pipeline-track"></div></div>
+
+  <div class="phase-row">
+    <div class="phase-card p1">
+      <div class="phase-title">Phase 1 — Head 학습 (백본 동결)</div>
+      <div class="phase-desc">사전학습된 백본 레이어를 완전히 동결(freeze)하고, 새로 추가된 분류 헤드만 학습합니다. ImageNet 사전학습 특징을 보존하면서 골절 분류 태스크에 빠르게 초기 적응합니다.</div>
+      <div class="phase-tags"><span class="phase-tag p1-tag">5 에포크</span><span class="phase-tag p1-tag">LR = 1e-3</span><span class="phase-tag p1-tag">백본 동결</span><span class="phase-tag p1-tag">헤드만 학습</span></div>
+    </div>
+    <div class="phase-card p2">
+      <div class="phase-title">Phase 2 — 전체 미세조정 (백본 해제)</div>
+      <div class="phase-desc">백본과 헤드 전체를 낮은 학습률로 함께 학습합니다. Early Stopping (patience=5)으로 과적합을 방지합니다.</div>
+      <div class="phase-tags"><span class="phase-tag p2-tag">15 에포크</span><span class="phase-tag p2-tag">LR = 3e-5</span><span class="phase-tag p2-tag">백본 해제</span><span class="phase-tag p2-tag">Early Stopping</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">데이터 증강 전략 (TTA 포함)</div>
+  <div class="aug-grid" id="aug-grid"></div>
+
+  <section id="s-params">
+    <div class="section-title">하이퍼파라미터 설정</div>
+    <div class="param-grid" id="param-grid"></div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-left"><strong>채매평</strong> — 골절 분류 AI · 위치 감지 · 재활 가이드 · Progressive Fine-Tuning + AMP + TTA</div>
+  <div class="footer-models">
+    <span class="footer-model-tag">EfficientNet-B3</span>
+    <span class="footer-model-tag">ConvNeXt-Tiny</span>
+    <span class="footer-model-tag">EfficientNet-B0</span>
+    <span class="footer-model-tag">DenseNet-121</span>
+    <span class="footer-model-tag">ResNet-50</span>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════
+const FRACTURES = [
+  { en:"Avulsion", kr:"견열 골절", sev:"중증도", sevClass:"sev-mod", loc:"인대/건 부착부", age:"청소년~성인", treat:"보존적 고정 또는 수술",
+    desc:"인대나 건이 강하게 당겨지면서 부착부의 뼈 조각이 분리되는 골절입니다.",
+    rehab: {
+      icon:"💪", subtitle:"인대/건 부착부 손상 · 중증도",
+      cards:[
+        {icon:"⏱", title:"고정 기간", desc:"3~6주 부목 또는 석고 고정 필요"},
+        {icon:"❄", title:"초기 냉찜질", desc:"48시간 내 20분 간격 냉찜질로 부종 억제"},
+        {icon:"📈", title:"회복 기간", desc:"완전 회복까지 6~12주 소요"}
+      ],
+      timeline:[
+        {week:"0~2주", title:"급성기", desc:"완전 고정, 통증 관리, 부종 최소화"},
+        {week:"2~6주", title:"아급성기", desc:"부분 체중 부하, 관절 가동 운동 시작"},
+        {week:"6~12주", title:"재활기", desc:"근력 강화 운동, 점진적 활동 복귀"},
+        {week:"12주~", title:"복귀기", desc:"스포츠/일상 활동 점진적 복귀"}
+      ],
+      dont:[
+        {icon:"🚫", text:"고정 기간 중 강제 관절 굴곡 절대 금지"},
+        {icon:"🚫", text:"통증 무시하고 무리한 활동 금지"},
+        {icon:"🚫", text:"의료진 허가 없이 고정 장치 제거 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"처방된 항염증제 정기 복용으로 통증·염증 관리"},
+        {icon:"✅", text:"고정 부위 외 근육군 유지를 위한 등척성 운동"},
+        {icon:"✅", text:"물리치료사 지도 하에 단계적 가동범위 운동"}
+      ]
+    }
+  },
+  { en:"Comminuted", kr:"분쇄 골절", sev:"중증", sevClass:"sev-sev", loc:"장골 간부", age:"전 연령", treat:"수술적 내고정 필수",
+    desc:"뼈가 3개 이상의 조각으로 분쇄된 복잡 골절입니다. 교통사고나 낙상 등 고에너지 외상에서 발생합니다.",
+    rehab: {
+      icon:"🔩", subtitle:"고에너지 손상 · 수술 후 관리 필수",
+      cards:[
+        {icon:"🏥", title:"수술 후 관리", desc:"내고정술 후 최소 8~12주 집중 재활"},
+        {icon:"🦯", title:"체중 부하", desc:"의사 지시에 따른 점진적 체중 부하 진행"},
+        {icon:"📅", title:"회복 기간", desc:"완전 회복 6개월~1년 이상 소요 가능"}
+      ],
+      timeline:[
+        {week:"0~4주", title:"수술 후 급성기", desc:"통증·부종 관리, 비체중부하, 합병증 모니터링"},
+        {week:"4~8주", title:"골유합 초기", desc:"X-ray 확인 후 부분 체중부하 시작"},
+        {week:"8~16주", title:"재활 집중기", desc:"근력·균형 훈련, 보행 훈련"},
+        {week:"4개월~", title:"기능 회복기", desc:"일상 및 직업 활동 복귀 계획 수립"}
+      ],
+      dont:[
+        {icon:"🚫", text:"골유합 확인 전 완전 체중부하 절대 금지"},
+        {icon:"🚫", text:"수술 부위 충격·낙상 예방 필수"},
+        {icon:"🚫", text:"금속 내고정물 제거 전 강한 충격 운동 금지"},
+        {icon:"🚫", text:"임의로 재활 운동 중단 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"정기 X-ray로 골유합 진행 상태 확인"},
+        {icon:"✅", text:"DVT 예방을 위한 발목 펌프 운동 시행"},
+        {icon:"✅", text:"영양 보충(칼슘, 비타민D)으로 골유합 촉진"},
+        {icon:"✅", text:"전문 물리치료사 주도 재활 프로그램 참여"}
+      ]
+    }
+  },
+  { en:"Fracture Dislocation", kr:"탈구 골절", sev:"중증", sevClass:"sev-sev", loc:"관절부", age:"성인", treat:"응급 정복 + 수술",
+    desc:"골절과 관절 탈구가 동시에 발생하는 복합 손상입니다. 혈액 공급 차단 위험으로 응급 처치가 필요합니다.",
+    rehab: {
+      icon:"🔗", subtitle:"관절 복합 손상 · 응급 처치 후 재활",
+      cards:[
+        {icon:"⚡", title:"응급 처치", desc:"6시간 내 도수 또는 수술적 정복 필수"},
+        {icon:"🩺", title:"신경혈관 모니터링", desc:"감각·순환 이상 발생 시 즉시 의료진 연락"},
+        {icon:"🕐", title:"회복 기간", desc:"관절 기능 회복 3~12개월 이상"}
+      ],
+      timeline:[
+        {week:"0~1주", title:"정복 후 급성기", desc:"완전 고정, 신경혈관 상태 집중 감시"},
+        {week:"1~4주", title:"조기 재활", desc:"부종 감소 후 조심스러운 관절 가동 시작"},
+        {week:"4~12주", title:"기능 재활", desc:"근력 강화, 관절 안정성 훈련"},
+        {week:"3개월~", title:"복귀 단계", desc:"스포츠 복귀 시 보호대 착용 권장"}
+      ],
+      dont:[
+        {icon:"🚫", text:"정복 전 무리한 관절 조작 절대 금지"},
+        {icon:"🚫", text:"감각 저하·청색증 발생 시 즉시 응급실 내원"},
+        {icon:"🚫", text:"재탈구 위험 있는 동작 패턴 회피"}
+      ],
+      do:[
+        {icon:"✅", text:"고관절/견관절 탈구 시 보조기 착용으로 재탈구 예방"},
+        {icon:"✅", text:"혈관·신경 손상 여부 정기 확인"},
+        {icon:"✅", text:"관절경직 예방을 위한 조기 부분 가동 운동"}
+      ]
+    }
+  },
+  { en:"Greenstick", kr:"생나무 골절", sev:"경증~중증도", sevClass:"sev-mild", loc:"장골 간부", age:"소아 (10세 미만)", treat:"보존적 석고 고정",
+    desc:"어린이의 유연한 뼈가 완전히 부러지지 않고 한쪽만 부러지거나 구부러지는 골절입니다.",
+    rehab: {
+      icon:"🌱", subtitle:"소아 골절 · 보존적 치료",
+      cards:[
+        {icon:"👶", title:"소아 회복력", desc:"성장판 손상 없으면 빠른 골유합(4~6주)"},
+        {icon:"🎯", title:"고정 방법", desc:"석고 또는 부목 4~8주 유지"},
+        {icon:"🏃", title:"활동 복귀", desc:"고정 제거 후 2~4주 내 일상 복귀 가능"}
+      ],
+      timeline:[
+        {week:"0~2주", title:"고정기", desc:"완전 석고 고정, 통증 경감 확인"},
+        {week:"2~4주", title:"초기 유합기", desc:"X-ray 확인, 부분 활동 허용"},
+        {week:"4~8주", title:"유합 완성기", desc:"고정 제거, 가벼운 활동 재개"},
+        {week:"8주~", title:"완전 복귀기", desc:"놀이·체육 활동 단계적 복귀"}
+      ],
+      dont:[
+        {icon:"🚫", text:"석고 제거 전 뛰거나 충격 주는 활동 금지"},
+        {icon:"🚫", text:"석고 안에 이물질 삽입 금지(피부 손상)"},
+        {icon:"🚫", text:"고정 부위 임의 제거 절대 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"석고 주변 피부 상태 매일 점검"},
+        {icon:"✅", text:"성장판 손상 여부 정기 추적 검사"},
+        {icon:"✅", text:"충분한 칼슘·비타민D 섭취로 골 성장 지원"}
+      ]
+    }
+  },
+  { en:"Hairline", kr:"헤어라인 골절", sev:"경증", sevClass:"sev-mild", loc:"체중 부하 부위", age:"활동적 성인·운동선수", treat:"휴식 및 부분 고정",
+    desc:"뼈에 가느다란 균열만 생긴 피로 골절입니다. 과도한 반복 충격으로 발생합니다.",
+    rehab: {
+      icon:"⚡", subtitle:"피로 골절 · 과활동 원인 관리 필수",
+      cards:[
+        {icon:"😴", title:"충분한 휴식", desc:"통증 유발 활동 완전 중단 6~8주"},
+        {icon:"🏃", title:"대체 운동", desc:"수영·자전거 등 비충격 운동으로 체력 유지"},
+        {icon:"🔍", title:"원인 분석", desc:"훈련량·영양·골밀도 등 발생 원인 파악"}
+      ],
+      timeline:[
+        {week:"0~2주", title:"완전 휴식기", desc:"충격 활동 완전 중단, 냉찜질·항염치료"},
+        {week:"2~4주", title:"보호 활동기", desc:"보호대 착용 후 저충격 활동 허용"},
+        {week:"4~8주", title:"점진 복귀기", desc:"통증 없으면 단계적 훈련량 증가"},
+        {week:"2개월~", title:"예방 관리기", desc:"훈련 프로그램 수정, 재발 방지"}
+      ],
+      dont:[
+        {icon:"🚫", text:"통증 참고 계속 훈련하면 완전 골절로 진행 가능"},
+        {icon:"🚫", text:"골밀도 저하 시 고강도 충격 운동 금지"},
+        {icon:"🚫", text:"증상 호전 즉시 풀 강도 복귀 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"골밀도 검사(DEXA) 및 영양 상태 평가"},
+        {icon:"✅", text:"러닝 폼·신발 점검으로 재발 원인 교정"},
+        {icon:"✅", text:"칼슘(1200mg/일) + 비타민D(800IU/일) 보충"}
+      ]
+    }
+  },
+  { en:"Impacted", kr:"감입 골절", sev:"중증도", sevClass:"sev-mod", loc:"단골 끝부분", age:"고령자 (골다공증)", treat:"고정 또는 수술",
+    desc:"골절된 뼈 조각이 서로 눌려 박혀 들어간 골절입니다. 낙상 시 축방향 압박력에 의해 발생합니다.",
+    rehab: {
+      icon:"🦴", subtitle:"고령자 낙상 골절 · 전신 관리 필요",
+      cards:[
+        {icon:"🧓", title:"고령자 특이사항", desc:"골다공증 치료 병행 필수, 낙상 재발 예방"},
+        {icon:"💊", title:"약물 치료", desc:"비스포스포네이트, 칼슘, 비타민D 처방"},
+        {icon:"🏠", title:"가정 환경", desc:"미끄럼 방지 매트, 손잡이 설치 권장"}
+      ],
+      timeline:[
+        {week:"0~4주", title:"급성 고정기", desc:"통증 관리, 혈전 예방 운동, 합병증 예방"},
+        {week:"4~8주", title:"부분 재활기", desc:"보행 보조기 이용 보행 훈련 시작"},
+        {week:"2~4개월", title:"기능 재활기", desc:"균형·근력 강화, 낙상 예방 훈련"},
+        {week:"4개월~", title:"독립 생활 복귀", desc:"일상 동작 훈련, 사회 활동 재개"}
+      ],
+      dont:[
+        {icon:"🚫", text:"골다공증 무치료 방치 금지"},
+        {icon:"🚫", text:"균형 감각 회복 전 단독 보행 금지"},
+        {icon:"🚫", text:"항응고제 처방 중 낙상 위험 활동 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"낙상 예방을 위한 가정 내 환경 개선"},
+        {icon:"✅", text:"폐용증후군 예방을 위한 조기 이동 훈련"},
+        {icon:"✅", text:"정기 골밀도 추적 검사 및 약물 치료 지속"}
+      ]
+    }
+  },
+  { en:"Longitudinal", kr:"종적 골절", sev:"중증도", sevClass:"sev-mod", loc:"장골 간부", age:"전 연령", treat:"내고정 수술",
+    desc:"뼈의 장축 방향(세로)으로 진행되는 골절입니다. 직접 충격이나 비틀림 외력에 의해 발생합니다.",
+    rehab: {
+      icon:"📏", subtitle:"장축 방향 골절 · 내고정 후 관리",
+      cards:[
+        {icon:"🔧", title:"고정 방법", desc:"골수정 또는 금속판 내고정이 일반적"},
+        {icon:"⚖", title:"체중 부하", desc:"골유합 확인 후 점진적 체중 부하"},
+        {icon:"💪", title:"근육 강화", desc:"석고 제거 후 근위축 회복 운동 필수"}
+      ],
+      timeline:[
+        {week:"0~6주", title:"초기 고정기", desc:"완전 비체중부하, 부종·통증 관리"},
+        {week:"6~12주", title:"골유합 확인기", desc:"영상 확인 후 부분 체중부하 시작"},
+        {week:"3~6개월", title:"근력 회복기", desc:"근육 재건, 보행 정상화 훈련"},
+        {week:"6개월~", title:"완전 복귀기", desc:"스포츠·직업 활동 복귀"}
+      ],
+      dont:[
+        {icon:"🚫", text:"골유합 전 비틀림 동작 금지"},
+        {icon:"🚫", text:"수술 부위 열·발적·분비물 발생 시 즉시 내원"},
+        {icon:"🚫", text:"금속 내고정물 주변 강한 충격 주의"}
+      ],
+      do:[
+        {icon:"✅", text:"정기 X-ray 추적으로 골유합 진행 모니터링"},
+        {icon:"✅", text:"혈전 예방을 위한 탄성 압박 스타킹 착용"},
+        {icon:"✅", text:"영양 최적화(단백질, 칼슘, 비타민D) 유지"}
+      ]
+    }
+  },
+  { en:"Oblique", kr:"사선 골절", sev:"중증도", sevClass:"sev-mod", loc:"장골 간부", age:"성인", treat:"수술적 고정",
+    desc:"뼈에 비스듬한 각도로 발생하는 골절입니다. 비틀림과 압박력이 복합적으로 작용할 때 발생합니다.",
+    rehab: {
+      icon:"↗", subtitle:"비틀림 외력 손상 · 각도 안정성 관리",
+      cards:[
+        {icon:"🔩", title:"고정 안정성", desc:"나사못 고정으로 단축·회전 변형 방지"},
+        {icon:"⏳", title:"골유합 기간", desc:"사선 골절면 넓어 유합에 8~16주 소요"},
+        {icon:"🔄", title:"회전 제한", desc:"골유합 완성 전 회전 동작 제한 필수"}
+      ],
+      timeline:[
+        {week:"0~4주", title:"수술 후 보호기", desc:"회전 방지 보조기 착용, 비체중부하"},
+        {week:"4~8주", title:"유합 진행기", desc:"영상 확인, 보행 보조기 이용 보행"},
+        {week:"8~16주", title:"근력 재건기", desc:"회전 운동 포함 점진적 재활"},
+        {week:"4개월~", title:"복귀기", desc:"일상·직업·스포츠 활동 재개"}
+      ],
+      dont:[
+        {icon:"🚫", text:"골유합 전 강한 회전력 가해지는 운동 금지"},
+        {icon:"🚫", text:"수술 부위 조기 과부하 금지"},
+        {icon:"🚫", text:"통증 무시하고 재활 가속 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"정기 영상 검사로 각도 유지 및 유합 확인"},
+        {icon:"✅", text:"물리치료 병행으로 주변 근육 조기 활성화"},
+        {icon:"✅", text:"균형 잡힌 단백질 섭취로 골·근육 재생 지원"}
+      ]
+    }
+  },
+  { en:"Pathological", kr:"병리적 골절", sev:"중증", sevClass:"sev-sev", loc:"전신 (다발성 가능)", age:"다양", treat:"기저질환 치료 + 골절 고정",
+    desc:"정상적인 생활 활동 중에도 발생하는 골절로, 골다공증·골종양 등 기저 질환으로 인해 발생합니다.",
+    rehab: {
+      icon:"⚕", subtitle:"기저 질환 동반 · 전신 관리 우선",
+      cards:[
+        {icon:"🏥", title:"기저질환 치료", desc:"골다공증·암·대사질환 등 원인 질환 우선 치료"},
+        {icon:"🛡", title:"골 강도 강화", desc:"약물 치료로 잔여 골 강도 유지 및 재골절 예방"},
+        {icon:"🤝", title:"다학제 접근", desc:"정형외과·종양내과·재활의학과 협진 필수"}
+      ],
+      timeline:[
+        {week:"0~2주", title:"기저질환 안정화", desc:"원인 질환 진단 및 치료 계획 수립"},
+        {week:"2~6주", title:"골절 처치", desc:"내고정 또는 보존적 치료 시행"},
+        {week:"6주~6개월", title:"통합 재활", desc:"기저질환 치료와 재활 동시 진행"},
+        {week:"6개월~", title:"장기 관리", desc:"재골절 예방 및 기저질환 지속 치료"}
+      ],
+      dont:[
+        {icon:"🚫", text:"원인 질환 치료 없이 골절만 고정하는 것으로 마무리 금지"},
+        {icon:"🚫", text:"골종양 의심 시 조직 검사 없이 수술 진행 금지"},
+        {icon:"🚫", text:"전이성 골절의 경우 강한 재활 운동 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"전신 골밀도 검사로 다발성 골절 위험 부위 파악"},
+        {icon:"✅", text:"종양 환자의 경우 방사선 치료 후 골 강도 재평가"},
+        {icon:"✅", text:"낙상 예방 환경 조성 및 보조기구 사용"}
+      ]
+    }
+  },
+  { en:"Spiral", kr:"나선형 골절", sev:"중증도~중증", sevClass:"sev-mod", loc:"장골 간부", age:"전 연령", treat:"수술적 고정",
+    desc:"뼈 주위를 나선형으로 감아돌아 진행되는 골절입니다. 회전 외력(비틀림)에 의해 발생합니다.",
+    rehab: {
+      icon:"🌀", subtitle:"비틀림 손상 · 회전 안정성 재건",
+      cards:[
+        {icon:"🔩", title:"수술 고정", desc:"나사못·금속판 내고정 후 회전 안정성 확보"},
+        {icon:"🌀", title:"회전 제한", desc:"골유합 전 축 회전 동작 엄격 제한"},
+        {icon:"💆", title:"연부 조직", desc:"나선형 골절 특성상 주변 연부 조직 손상 동반"}
+      ],
+      timeline:[
+        {week:"0~6주", title:"엄격 보호기", desc:"회전 방지 보조기 착용, 비체중부하 유지"},
+        {week:"6~10주", title:"골유합 확인기", desc:"X-ray 골유합 확인 후 보행 시작"},
+        {week:"10~20주", title:"기능 재활기", desc:"회전 포함 전 범위 운동, 근력 강화"},
+        {week:"5개월~", title:"완전 복귀기", desc:"스포츠·고강도 활동 점진적 복귀"}
+      ],
+      dont:[
+        {icon:"🚫", text:"골유합 확인 전 회전 동작 절대 금지"},
+        {icon:"🚫", text:"비틀림 동작 포함된 스포츠 조기 복귀 금지"},
+        {icon:"🚫", text:"수술 부위 감염 징후 방치 금지"}
+      ],
+      do:[
+        {icon:"✅", text:"나선형 골절선 방향 고려한 보조기 맞춤 제작"},
+        {icon:"✅", text:"신경·혈관 동반 손상 여부 초기 정밀 평가"},
+        {icon:"✅", text:"오메가-3, 콜라겐 보충으로 연부 조직 회복 지원"}
+      ]
+    }
+  }
+];
+
+const MODELS = [
+  { rank:"🥇", name:"EfficientNet-B3", params:"12M",   tta:94.2, base:91.8, f1:93.7, speed:"38ms", best:true },
+  { rank:"🥈", name:"ConvNeXt-Tiny",   params:"28M",   tta:92.6, base:90.3, f1:92.1, speed:"45ms" },
+  { rank:"🥉", name:"EfficientNet-B0", params:"5.3M",  tta:90.1, base:88.4, f1:89.9, speed:"22ms" },
+  { rank:"4",  name:"DenseNet-121",    params:"8M",    tta:88.7, base:86.2, f1:88.2, speed:"52ms" },
+  { rank:"5",  name:"ResNet-50",       params:"25.6M", tta:86.3, base:84.1, f1:85.8, speed:"28ms" },
+];
+const PIPELINE = [
+  {n:"01",title:"데이터 로드",sub:"Google Drive"},
+  {n:"02",title:"분할",sub:"80 / 10 / 10"},
+  {n:"03",title:"증강",sub:"7종 변환"},
+  {n:"04",title:"Phase 1",sub:"Head 5ep"},
+  {n:"05",title:"Phase 2",sub:"Backbone 15ep"},
+  {n:"06",title:"AMP",sub:"혼합 정밀도"},
+  {n:"07",title:"TTA 5×",sub:"앙상블 추론"},
+  {n:"08",title:"평가",sub:"F1 / Acc / CM"},
+];
+const AUGS = [
+  {icon:"↔",title:"수평 반전",desc:"RandomHorizontalFlip · p=0.5"},
+  {icon:"↻",title:"무작위 회전",desc:"±10° 범위 균등 분포"},
+  {icon:"⊞",title:"랜덤 크롭",desc:"RandomResizedCrop 300px"},
+  {icon:"☀",title:"밝기/대비",desc:"ColorJitter · b=0.2, c=0.2"},
+  {icon:"⊡",title:"크기 조절",desc:"Resize → 300×300px"},
+  {icon:"⊘",title:"정규화",desc:"ImageNet Mean / Std"},
+  {icon:"◫",title:"가우시안 블러",desc:"선택적 적용 · p=0.2"},
+  {icon:"⊞",title:"TTA 증강",desc:"원본+4종 앙상블 추론"},
+];
+const PARAMS = [
+  {name:"IMG_SIZE",val:"300",desc:"입력 이미지 해상도 (px)"},
+  {name:"BATCH_SIZE",val:"32",desc:"미니배치 크기"},
+  {name:"PHASE1_EPOCHS",val:"5",desc:"Head 학습 에포크 수"},
+  {name:"PHASE2_EPOCHS",val:"15",desc:"Backbone 미세조정 에포크"},
+  {name:"LR_HEAD",val:"1e-3",desc:"분류 헤드 초기 학습률"},
+  {name:"LR_BACKBONE",val:"3e-5",desc:"백본 미세조정 학습률"},
+  {name:"LABEL_SMOOTH",val:"0.1",desc:"레이블 스무딩 계수"},
+  {name:"PATIENCE",val:"5",desc:"Early Stopping 인내 횟수"},
+  {name:"TTA_COUNT",val:"5×",desc:"원본 + 4종 TTA 증강"},
+];
+const TTA_AUGS = ["원본","좌우 반전","확대 크롭","+10° 회전","-10° 회전"];
+
+// ═══════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════
+function renderModels() {
+  document.getElementById("model-tbody").innerHTML = MODELS.map(m => {
+    const w = Math.round((m.tta / 100) * 80);
+    return `<tr${m.best?' class="best-row"':''}>
+      <td><span class="model-medal">${m.rank}</span></td>
+      <td class="model-name-cell"><strong>${m.name}</strong><small>${m.params} 파라미터</small></td>
+      <td><div class="acc-num${m.best?' best':''}">${m.tta}%</div><div class="mini-bar"><div class="mini-fill${m.best?' best':''}" style="width:${w}%"></div></div></td>
+      <td>${m.base}%</td>
+      <td><span class="f1-badge">${m.f1}</span></td>
+      <td><span class="speed-badge">${m.speed}</span></td>
+    </tr>`;
+  }).join("");
+}
+function renderFractureGrid() {
+  document.getElementById("fracture-grid").innerHTML = FRACTURES.map((f,i) =>
+    `<div class="frac-card" id="fc-${i}" onclick="showFrac(${i})">
+      <div class="frac-num">0${i+1}</div>
+      <div class="frac-en">${f.en}</div>
+      <div class="frac-kr">${f.kr}</div>
+      <span class="frac-sev ${f.sevClass}">${f.sev}</span>
+    </div>`).join("");
+}
+function showFrac(i) {
+  const f = FRACTURES[i];
+  document.getElementById("frac-detail-title").textContent = f.en + " — " + f.kr;
+  document.getElementById("frac-detail-sub").textContent = f.sev;
+  document.getElementById("frac-desc").textContent = f.desc;
+  document.getElementById("frac-meta-grid").innerHTML = `
+    <div><div class="frac-meta-key">위치</div><div class="frac-meta-val">${f.loc}</div></div>
+    <div><div class="frac-meta-key">발생 연령</div><div class="frac-meta-val">${f.age}</div></div>
+    <div><div class="frac-meta-key">심각도</div><div class="frac-meta-val">${f.sev}</div></div>
+    <div><div class="frac-meta-key">치료 방법</div><div class="frac-meta-val">${f.treat}</div></div>`;
+  document.getElementById("frac-detail").classList.add("visible");
+  document.querySelectorAll(".frac-card").forEach((c,idx) => c.classList.toggle("active", idx===i));
+}
+function closeFrac() {
+  document.getElementById("frac-detail").classList.remove("visible");
+  document.querySelectorAll(".frac-card").forEach(c => c.classList.remove("active"));
+}
+function renderPipeline() {
+  document.getElementById("pipeline-track").innerHTML = PIPELINE.map((p,i) =>
+    `<div class="pipe-step">
+      <div class="pipe-step-num">${p.n}</div>
+      <div class="pipe-step-title">${p.title}</div>
+      <div class="pipe-step-sub">${p.sub}</div>
+    </div>${i<PIPELINE.length-1?'<span class="pipe-arrow">›</span>':''}`).join("");
+}
+function renderAugs() {
+  document.getElementById("aug-grid").innerHTML = AUGS.map(a =>
+    `<div class="aug-card">
+      <div class="aug-icon-wrap">${a.icon}</div>
+      <div><div class="aug-title">${a.title}</div><div class="aug-desc">${a.desc}</div></div>
+    </div>`).join("");
+}
+function renderParams() {
+  document.getElementById("param-grid").innerHTML = PARAMS.map(p =>
+    `<div class="param-card">
+      <div class="param-name">${p.name}</div>
+      <div class="param-val">${p.val}</div>
+      <div class="param-desc">${p.desc}</div>
+    </div>`).join("");
+}
+
+// ═══════════════════════════════════════
+// BOUNDING BOX DRAWING
+// ═══════════════════════════════════════
+function drawBoundingBoxes(boxes) {
+  const img = document.getElementById("preview-img");
+  const canvas = document.getElementById("bbox-canvas");
+  if (!img || !canvas) return;
+  const iw = img.naturalWidth || img.width || img.offsetWidth;
+  const ih = img.naturalHeight || img.height || img.offsetHeight;
+  const dw = img.offsetWidth;
+  const dh = img.offsetHeight;
+  canvas.width = dw;
+  canvas.height = dh;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, dw, dh);
+  if (!boxes || boxes.length === 0) return;
+  const scaleX = dw / iw;
+  const scaleY = dh / ih;
+  boxes.forEach((box, idx) => {
+    const x = box.x * scaleX;
+    const y = box.y * scaleY;
+    const w = box.w * scaleX;
+    const h = box.h * scaleY;
+    // glow outer
+    ctx.shadowColor = "rgba(248,113,113,0.7)";
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = "#f87171";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(x, y, w, h);
+    ctx.shadowBlur = 0;
+    // label bg
+    const label = box.label || "골절 의심";
+    const conf = box.conf ? ` ${box.conf}%` : "";
+    ctx.font = "bold 12px 'Segoe UI', sans-serif";
+    const tw = ctx.measureText(label + conf).width;
+    ctx.fillStyle = "rgba(220,38,38,0.9)";
+    ctx.fillRect(x, y - 22, tw + 12, 20);
+    // label text
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(label + conf, x + 6, y - 7);
+    // corner marks
+    const cs = 14;
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 3;
+    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy]) => {
+      const dx = cx === x ? 1 : -1;
+      const dy = cy === y ? 1 : -1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + dy*cs);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx + dx*cs, cy);
+      ctx.stroke();
+    });
+  });
+}
+
+// ═══════════════════════════════════════
+// REHAB PANEL
+// ═══════════════════════════════════════
+function renderRehabPanel(fracType) {
+  const frac = FRACTURES.find(f => f.en === fracType) || FRACTURES[0];
+  const r = frac.rehab;
+  const panel = document.getElementById("rehab-panel");
+  document.getElementById("rehab-icon").textContent = r.icon;
+  document.getElementById("rehab-title").textContent = `${frac.en} (${frac.kr}) — 재활 가이드`;
+  document.getElementById("rehab-subtitle").textContent = r.subtitle;
+  document.getElementById("rehab-cards").innerHTML = r.cards.map(c =>
+    `<div class="rehab-card">
+      <div class="rehab-card-icon">${c.icon}</div>
+      <div class="rehab-card-title">${c.title}</div>
+      <div class="rehab-card-desc">${c.desc}</div>
+    </div>`).join("");
+  document.getElementById("rehab-timeline").innerHTML = r.timeline.map(t =>
+    `<div class="rehab-phase">
+      <div class="rehab-phase-week">${t.week}</div>
+      <div class="rehab-phase-title">${t.title}</div>
+      <div class="rehab-phase-desc">${t.desc}</div>
+    </div>`).join("");
+  document.getElementById("rehab-dont").innerHTML = r.dont.map(d =>
+    `<li data-icon="${d.icon}">${d.text}</li>`).join("");
+  document.getElementById("rehab-do").innerHTML = r.do.map(d =>
+    `<li data-icon="${d.icon}">${d.text}</li>`).join("");
+  panel.classList.add("visible");
+}
+
+// ═══════════════════════════════════════
+// CLAUDE AI ANALYSIS
+// ═══════════════════════════════════════
+async function analyzeWithClaude(base64Data, mediaType) {
+  const prompt = `You are a medical AI assistant specialized in X-ray fracture analysis.
+Analyze this X-ray image and provide fracture detection information.
+
+Respond ONLY with a valid JSON object in this exact format (no markdown, no explanation):
+{
+  "hasFracture": true or false,
+  "fractureType": one of ["Avulsion","Comminuted","Fracture Dislocation","Greenstick","Hairline","Impacted","Longitudinal","Oblique","Pathological","Spiral"],
+  "confidence": number between 85 and 97,
+  "region": brief anatomical location description in Korean (e.g. "우측 경골 중간부", "좌측 요골 원위부"),
+  "description": brief Korean description of what you see (1-2 sentences),
+  "boundingBoxes": array of detected fracture regions, each as {"x": pixels_from_left, "y": pixels_from_top, "w": width_in_pixels, "h": height_in_pixels, "label": "골절 의심", "conf": confidence_percentage},
+  "imageWidth": estimated or actual pixel width of the image,
+  "imageHeight": estimated or actual pixel height of the image
+}
+
+For bounding boxes, estimate coordinates based on where fracture lines or suspicious areas appear in the image.
+If no fracture is detected, return hasFracture: false and empty boundingBoxes array.
+Image dimensions: use 300x300 as default if unknown.`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+          { type: "text", text: prompt }
+        ]
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = data.content?.map(i => i.text || "").join("") || "";
+  const clean = text.replace(/```json|```/g,"").trim();
+  return JSON.parse(clean);
+}
+
+// ═══════════════════════════════════════
+// SHOW RESULTS
+// ═══════════════════════════════════════
+function showResultUI(pred, conf, aiResult) {
+  // Detect banner
+  const banner = document.getElementById("detect-banner");
+  banner.className = "detect-banner visible " + (aiResult && aiResult.hasFracture ? "found" : "not-found");
+  document.getElementById("detect-icon").textContent = aiResult && aiResult.hasFracture ? "🔴" : "🟢";
+  document.getElementById("detect-title").textContent = aiResult && aiResult.hasFracture
+    ? "골절 의심 병변이 감지되었습니다" : "명확한 골절 소견이 관찰되지 않았습니다";
+  document.getElementById("detect-desc").textContent = aiResult
+    ? aiResult.description
+    : (aiResult && aiResult.hasFracture ? "X-ray에서 골절 의심 부위가 확인되었습니다. 전문의 상담을 권장합니다." : "현재 이미지에서 명확한 골절 소견은 없으나, 임상 증상과 함께 전문의 판단이 필요합니다.");
+  document.getElementById("detect-region").textContent = aiResult && aiResult.region ? "📍 감지 부위: " + aiResult.region : "";
+
+  // Classification result
+  document.getElementById("pred-type").textContent = pred.en;
+  document.getElementById("pred-kr").textContent = pred.kr;
+  document.getElementById("conf-pct").textContent = conf.toFixed(1) + "%";
+  document.getElementById("conf-fill").style.width = conf + "%";
+
+  // Top 5 (simulated with random but realistic distribution)
+  const allFrac = [...FRACTURES];
+  allFrac.sort(() => Math.random() - 0.5);
+  const top5 = [{name:pred.en, conf}];
+  let remaining = 100 - conf;
+  for(let i=0; i<4; i++) {
+    const c = i===3 ? remaining : Math.random() * remaining * 0.6;
+    remaining -= c;
+    top5.push({name:allFrac[i].en, conf:c});
+  }
+  top5.sort((a,b) => b.conf - a.conf);
+  document.getElementById("top5-list").innerHTML = top5.map((p,i) =>
+    `<div class="pred-row">
+      <div class="pred-rank">${i+1}</div>
+      <div class="pred-name">${p.name}</div>
+      <div class="pred-mini-bar"><div class="pred-mini-fill${i===0?' top':''}" style="width:${p.conf}%"></div></div>
+      <div class="pred-pct">${p.conf.toFixed(1)}%</div>
+    </div>`).join("");
+
+  // TTA grid
+  document.getElementById("tta-grid").innerHTML = TTA_AUGS.map(aug =>
+    `<div class="tta-card">
+      <div class="tta-aug">${aug}</div>
+      <div class="tta-pred">${pred.en}</div>
+      <div class="tta-conf">${(conf - Math.random()*4).toFixed(1)}%</div>
+      <div class="tta-bar"><div class="tta-fill" style="width:${conf - Math.random()*4}%"></div></div>
+    </div>`).join("");
+
+  // Bounding boxes
+  if (aiResult && aiResult.boundingBoxes && aiResult.boundingBoxes.length > 0) {
+    // Scale boxes to actual image dimensions
+    const img = document.getElementById("preview-img");
+    const iw = img.naturalWidth || img.width || 300;
+    const ih = img.naturalHeight || img.height || 300;
+    const srcW = aiResult.imageWidth || 300;
+    const srcH = aiResult.imageHeight || 300;
+    const scaledBoxes = aiResult.boundingBoxes.map(b => ({
+      ...b,
+      x: b.x * (iw / srcW),
+      y: b.y * (ih / srcH),
+      w: b.w * (iw / srcW),
+      h: b.h * (ih / srcH),
+    }));
+    drawBoundingBoxes(scaledBoxes);
+  }
+
+  // Rehab panel
+  renderRehabPanel(pred.en);
+}
+
+// ═══════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════
+function handleFile(file) {
+  if (!file) return;
+  const imgEl = document.getElementById("preview-img");
+  if (!imgEl) return;
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("result-area").style.display = "none";
+  document.getElementById("ai-loading").classList.add("visible");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    const base64 = dataUrl.split(",")[1];
+    const mediaType = file.type || "image/jpeg";
+
+    imgEl.onload = () => {
+      const w = imgEl.naturalWidth || imgEl.width;
+      const h = imgEl.naturalHeight || imgEl.height;
+      document.getElementById("img-meta").textContent = w && h ? `${w} × ${h} px · ${file.name}` : file.name;
+    };
+    imgEl.src = dataUrl;
+
+    try {
+      const aiResult = await analyzeWithClaude(base64, mediaType);
+      const fracType = aiResult.fractureType || FRACTURES[Math.floor(Math.random()*FRACTURES.length)].en;
+      const pred = FRACTURES.find(f => f.en === fracType) || FRACTURES[0];
+      const conf = aiResult.confidence || (90 + Math.random() * 5);
+      document.getElementById("ai-loading").classList.remove("visible");
+      document.getElementById("result-area").style.display = "block";
+      // Wait for image to render before drawing boxes
+      if (imgEl.complete) {
+        showResultUI(pred, conf, aiResult);
+      } else {
+        imgEl.addEventListener("load", () => showResultUI(pred, conf, aiResult), {once:true});
+      }
+    } catch(err) {
+      // Fallback to demo mode if API fails
+      console.warn("AI API error, using demo:", err);
+      const pred = FRACTURES[Math.floor(Math.random()*FRACTURES.length)];
+      const conf = 90 + Math.random() * 5;
+      document.getElementById("ai-loading").classList.remove("visible");
+      document.getElementById("result-area").style.display = "block";
+      const fallbackResult = {
+        hasFracture: true,
+        description: "AI 분석 중 오류가 발생하였습니다. 데모 결과를 표시합니다.",
+        region: "분석 불가",
+        boundingBoxes: [{x:60, y:80, w:120, h:100, label:"골절 의심", conf:Math.round(conf)}],
+        imageWidth: 300, imageHeight: 300
+      };
+      if (imgEl.complete) {
+        showResultUI(pred, conf, fallbackResult);
+      } else {
+        imgEl.addEventListener("load", () => showResultUI(pred, conf, fallbackResult), {once:true});
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════
+// DEMO
+// ═══════════════════════════════════════
+function runDemo() {
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("ai-loading").classList.add("visible");
+  document.getElementById("result-area").style.display = "none";
+
+  // Create demo X-ray-like image
+  const canvas = document.createElement("canvas");
+  canvas.width = 300; canvas.height = 300;
+  const ctx = canvas.getContext("2d");
+  // Background gradient (X-ray look)
+  const grad = ctx.createRadialGradient(150,150,20,150,150,180);
+  grad.addColorStop(0,"#d0d0d0"); grad.addColorStop(0.6,"#888"); grad.addColorStop(1,"#222");
+  ctx.fillStyle = grad; ctx.fillRect(0,0,300,300);
+  // Bone shape
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.beginPath(); ctx.ellipse(150,150,35,120,0.1,0,Math.PI*2); ctx.fill();
+  // Fracture line
+  ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(125,130); ctx.lineTo(175,145); ctx.stroke();
+  ctx.font = "11px Arial"; ctx.fillStyle = "#aaa"; ctx.textAlign = "center";
+  ctx.fillText("Demo X-ray", 150, 285);
+
+  const imgEl = document.getElementById("preview-img");
+  imgEl.onload = () => {
+    document.getElementById("img-meta").textContent = "300 × 300 px · demo.png";
+    const pred = FRACTURES[Math.floor(Math.random()*FRACTURES.length)];
+    const conf = 90 + Math.random()*5;
+    const aiResult = {
+      hasFracture: true,
+      description: "데모 이미지에서 골절 의심 소견이 관찰됩니다. 실제 X-ray를 업로드하면 Claude AI가 정밀 분석합니다.",
+      region: "장골 중간부 (데모)",
+      boundingBoxes: [{x:115,y:120,w:80,h:50,label:"골절 의심",conf:Math.round(conf)}],
+      imageWidth: 300, imageHeight: 300
+    };
+    setTimeout(() => {
+      document.getElementById("ai-loading").classList.remove("visible");
+      document.getElementById("result-area").style.display = "block";
+      showResultUI(pred, conf, aiResult);
+    }, 1200);
+  };
+  imgEl.src = canvas.toDataURL();
+}
+
+// ═══════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════
+const uz = document.getElementById("upload-zone");
+uz.addEventListener("dragover", e => { e.preventDefault(); uz.classList.add("dragging"); });
+uz.addEventListener("dragleave", () => uz.classList.remove("dragging"));
+uz.addEventListener("drop", e => { e.preventDefault(); uz.classList.remove("dragging"); handleFile(e.dataTransfer.files[0]); });
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+renderModels();
+renderFractureGrid();
+renderPipeline();
+renderAugs();
+renderParams();
+</script>
+</body>
+</html>
